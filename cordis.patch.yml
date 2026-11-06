@@ -1,0 +1,10 @@
+# dsh-taskpilot bundle patch：往 profile 里插一条 taskpilot 插件
+- insert:
+    - id: dsh-taskpilot
+      name: dsh-taskpilot
+      config:
+        scanIntervalMinutes: 15
+        quietHours: [23, 8]
+        nagCooldownHours: 24
+        maxPerScan: 3
+        stallDays: 3
