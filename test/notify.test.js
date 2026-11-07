@@ -180,8 +180,12 @@ test('nagText 三个分支的话都对得上', () => {
   assert.match(nagText(blocked, now), /等审批 还没动/)
   assert.match(nagText(blocked, now), /卡在哪儿了/)
 
-  const today = task({ title: '今天到期', priority: 'low', due: '2026-11-10', status: 'todo' })
-  assert.match(nagText(today, now), /今天到期/)
+  // 逾期不到 24 小时：已经过点了，不能说成「今天到期」——那听着像还没到。
+  // 注意别把断言写成标题的同名词，否则永远匹配得上，测了个寂寞。
+  const just = task({ title: '刚过点的事', priority: 'low', due: '2026-11-10 06:00', status: 'todo' })
+  const justText = nagText(just, now)
+  assert.match(justText, /刚过截止时间/)
+  assert.doesNotMatch(justText, /今天到期/)
 })
 
 test('review：完成按结束时间统计，不按创建时间', () => {

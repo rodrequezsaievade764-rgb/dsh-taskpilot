@@ -1,6 +1,6 @@
 {
   "name": "dsh-taskpilot",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "任务全生命周期追踪：建任务、改状态、列清单、复盘，逾期自动催。不作单纯的待办清单，只补 DSH 待办没有的自动追踪与复盘。",
   "type": "module",

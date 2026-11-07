@@ -620,7 +620,30 @@ test('taskpilot_list：tag 筛不到时给明确空态，不说「干净」', as
   await add.execute({ title: '有的事', tags: 'a' })
   const r = await list.execute({ tag: 'zzz' })
   assert.equal(r.ok, true)
-  assert.match(r.message, /没有带「zzz」标签的未结束任务/)
+  assert.match(r.message, /没有未结束的带「zzz」标签的任务/)
+})
+
+test('taskpilot_list：空态的范围跟着筛选条件走，不一律说「未结束任务」', async (t) => {
+  const { ctx } = boot(t)
+  const add = findTool(ctx, 'taskpilot_add')
+  const list = findTool(ctx, 'taskpilot_list')
+  const upd = findTool(ctx, 'taskpilot_update')
+  const a = await add.execute({ title: '已做完的', tags: 'a' })
+  const id = a.task?.id || a.id
+  await upd.execute({ id, status: 'done' })
+
+  // status 指定了已完成：范围是「状态是 done 的」，不是「未结束的」
+  const byStatus = await list.execute({ status: 'done', tag: 'zzz' })
+  assert.match(byStatus.message, /状态是「done」的/)
+  assert.doesNotMatch(byStatus.message, /未结束/)
+
+  // includeClosed：范围是全库，也不该说「未结束」
+  const byClosed = await list.execute({ includeClosed: true, tag: 'zzz' })
+  assert.doesNotMatch(byClosed.message, /未结束/)
+
+  // 什么都没筛、库也是空的：才说「干净」
+  const empty = await list.execute({ status: 'blocked' })
+  assert.match(empty.message, /没有状态是「blocked」的任务/)
 })
 
 test('taskpilot_list：列出的任务带 #标签', async (t) => {
