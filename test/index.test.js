@@ -577,3 +577,71 @@ test('apply：插件产出的文件能被下一轮实例读回（无状态漂移
   const r = await findTool(ctx2, 'taskpilot_list').execute({ all: true })
   assert.match(r.message, /跨实例任务/)
 })
+
+test('taskpilot_add：tags 归一化 —— 中文逗号 / 顿号 / 空格都算分隔，去重、小写', async (t) => {
+  const { tools } = boot(t)
+  const r = await findTool({ registered: tools }, 'taskpilot_add').execute({ title: '写文档', tags: '写作，文档 写作, DOC' })
+  assert.deepEqual(r.task.tags, ['写作', '文档', 'doc'])
+})
+
+test('taskpilot_list：tag 筛选只列带该标签的任务，大小写不敏感', async (t) => {
+  const { ctx, tools } = boot(t)
+  const add = findTool(ctx, 'taskpilot_add')
+  const list = findTool(ctx, 'taskpilot_list')
+  await add.execute({ title: '前端任务', tags: 'FE' })
+  await add.execute({ title: '后端任务', tags: 'be' })
+  const r = await list.execute({ tag: 'fe' })
+  assert.match(r.message, /前端任务/)
+  assert.doesNotMatch(r.message, /后端任务/)
+  assert.equal(r.count, 1)
+})
+
+test('taskpilot_list：tag 与 status / keyword 叠加时互不覆盖', async (t) => {
+  const { ctx } = boot(t)
+  const add = findTool(ctx, 'taskpilot_add')
+  const upd = findTool(ctx, 'taskpilot_update')
+  const list = findTool(ctx, 'taskpilot_list')
+  const a = await add.execute({ title: '写周报 甲', tags: 'work' })
+  await add.execute({ title: '写周报 乙', tags: 'work' })
+  await add.execute({ title: '写周报 丙', tags: 'home' })
+  await upd.execute({ id: a.task.id, status: 'done' })
+
+  const r = await list.execute({ tag: 'work', keyword: '周报' })
+  assert.match(r.message, /写周报 乙/)
+  assert.doesNotMatch(r.message, /写周报 甲/)
+  assert.doesNotMatch(r.message, /写周报 丙/)
+  assert.equal(r.count, 1)
+})
+
+test('taskpilot_list：tag 筛不到时给明确空态，不说「干净」', async (t) => {
+  const { ctx } = boot(t)
+  const add = findTool(ctx, 'taskpilot_add')
+  const list = findTool(ctx, 'taskpilot_list')
+  await add.execute({ title: '有的事', tags: 'a' })
+  const r = await list.execute({ tag: 'zzz' })
+  assert.equal(r.ok, true)
+  assert.match(r.message, /没有带「zzz」标签的未结束任务/)
+})
+
+test('taskpilot_list：列出的任务带 #标签', async (t) => {
+  const { ctx } = boot(t)
+  const add = findTool(ctx, 'taskpilot_add')
+  const list = findTool(ctx, 'taskpilot_list')
+  await add.execute({ title: '带标的任务', tags: 'a,b' })
+  const r = await list.execute({})
+  assert.match(r.message, /#a #b/)
+})
+
+test('taskpilot_update：tags 整组替换，可清空', async (t) => {
+  const { ctx } = boot(t)
+  const add = findTool(ctx, 'taskpilot_add')
+  const upd = findTool(ctx, 'taskpilot_update')
+  const a = await add.execute({ title: '改标签', tags: 'old' })
+  const r1 = await upd.execute({ id: a.task.id, tags: '新,新2' })
+  assert.deepEqual(r1.task.tags, ['新', '新2'])
+  assert.match(r1.message, /标签改成/)
+
+  const r2 = await upd.execute({ id: a.task.id, tags: '' })
+  assert.deepEqual(r2.task.tags, [])
+  assert.match(r2.message, /标签清空了/)
+})

@@ -7,6 +7,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import {
   createStore, newId, normStatus, normPriority, normDue, dueMs, isOverdue,
   daysBetween, SCHEMA_VERSION, SchemaVersionError, STATUSES, OPEN,
+  normTags, hasTag, MAX_TAGS,
 } from '../lib/store.js'
 import { tempDir, task, DAY } from './_helpers.js'
 
@@ -302,4 +303,34 @@ test('导出常量保持稳定（工具层依赖它们）', () => {
   assert.deepEqual(STATUSES, ['todo', 'doing', 'blocked', 'done', 'cancelled'])
   assert.deepEqual(OPEN, ['todo', 'doing', 'blocked'])
   assert.equal(SCHEMA_VERSION, 1)
+})
+
+test('normTags：中文逗号 / 顿号 / 空白都算分隔符', () => {
+  assert.deepEqual(normTags('a，b、c d'), ['a', 'b', 'c', 'd'])
+})
+
+test('normTags：去重且小写，保持首次出现顺序', () => {
+  assert.deepEqual(normTags('FE fe Fe backend'), ['fe', 'backend'])
+})
+
+test('normTags：上限 MAX_TAGS，多的截掉', () => {
+  const got = normTags('a,b,c,d,e,f,g,h,i,j')
+  assert.equal(got.length, MAX_TAGS)
+  assert.deepEqual(got, ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+})
+
+test('normTags：空输入 / null / 数组都能吃', () => {
+  assert.deepEqual(normTags(''), [])
+  assert.deepEqual(normTags(null), [])
+  assert.deepEqual(normTags(undefined), [])
+  assert.deepEqual(normTags(['X', 'y']), ['x', 'y'])
+})
+
+test('hasTag：大小写不敏感、只认全等、无 tags 不炸', () => {
+  assert.equal(hasTag({ tags: ['FE'] }, 'fe'), true)
+  assert.equal(hasTag({ tags: ['fe'] }, 'FE'), true)
+  assert.equal(hasTag({ tags: ['frontend'] }, 'front'), false)
+  assert.equal(hasTag({}, 'x'), false)
+  assert.equal(hasTag(null, 'x'), false)
+  assert.equal(hasTag({ tags: ['x'] }, ''), false)
 })
