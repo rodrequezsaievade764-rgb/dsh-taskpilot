@@ -1,6 +1,6 @@
 {
   "name": "dsh-taskpilot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "任务全生命周期追踪：建任务、改状态、列清单、复盘，逾期自动催。不作单纯的待办清单，只补 DSH 待办没有的自动追踪与复盘。",
   "type": "module",
@@ -9,10 +9,29 @@
     ".": "./lib/index.js",
     "./package.json": "./package.json"
   },
+  "files": [
+    "lib/",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "keywords": ["deepseek-harness", "dsh-plugin", "todo", "task", "reminder"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rodrequezsaievade764-rgb/dsh-taskpilot.git"
+  },
+  "homepage": "https://github.com/rodrequezsaievade764-rgb/dsh-taskpilot",
+  "engines": {
+    "node": ">=22.13.0"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*"
