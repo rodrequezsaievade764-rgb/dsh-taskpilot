@@ -43,6 +43,30 @@ test('插件导出 name / inject，apply 注册四个工具', (t) => {
   }
 })
 
+// 宿主对工具的校验：output 里必须同时有 schema 与 render，缺一个就 warn 级拒收。
+// 这种失败最阴——插件加载成功、日志只有一行警告，工具却一个都调不到。
+test('每个工具的 output 里都有 schema 与 render（宿主拒收的形状）', (t) => {
+  const { tools } = boot(t)
+  for (const tool of tools) {
+    assert.ok(tool.output && typeof tool.output === 'object', `${tool.name} 缺 output`)
+    assert.equal(typeof tool.output.schema, 'object', `${tool.name} 的 output.schema 不是对象`)
+    assert.equal(typeof tool.output.render, 'function', `${tool.name} 的 output.render 不是函数`)
+    assert.equal(tool.render, undefined, `${tool.name} 不该在顶层挂 render`)
+  }
+})
+
+test('工具的 render 返回内容块数组，不是裸字符串', (t) => {
+  const { tools } = boot(t)
+  for (const tool of tools) {
+    const blocks = tool.output.render({}, { ok: true, message: 'hi' })
+    assert.ok(Array.isArray(blocks), `${tool.name} 的 render 没返回数组`)
+    assert.equal(blocks[0].type, 'text')
+    assert.equal(typeof blocks[0].text, 'string')
+    const fail = tool.output.render({}, { ok: false, message: '炸了' })
+    assert.match(fail[0].text, /✗/, `${tool.name} 的失败渲染该带 ✗`)
+  }
+})
+
 // ---------- add ----------
 
 test('add：正常记一条，字段补齐', async (t) => {
